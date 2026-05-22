@@ -32,8 +32,11 @@ jobs:
 
       - name: Verify committed dist is up to date
         run: |
-          git diff --exit-status -- dist \
-            || (echo "::error::dist/ is stale - run 'pnpm build' and commit the result" && exit 1)
+          if [ -n "$(git status --porcelain -- dist)" ]; then
+            echo "::error::dist/ is stale - run 'pnpm build' and commit the result"
+            git --no-pager diff -- dist
+            exit 1
+          fi
 
       - name: Test
         run: pnpm test
