@@ -18,6 +18,13 @@ export interface CacheHandlerOptions {
   client?: Redis;
   /** Namespace for every key this app writes. Set per-app so multiple apps can share one Redis. */
   keyPrefix?: string;
+  /**
+   * Release identifier (git SHA, image tag, build id). When set, it is folded
+   * into the key namespace so pods running different code versions never read
+   * each other's cache entries during a rolling deploy. A new version starts
+   * with a cold cache; old entries age out via their TTL.
+   */
+  version?: string;
   /** Floor for the Redis TTL on each entry [seconds]. Default 60. */
   minTtlSeconds?: number;
   /** Log fallbacks/errors to console. Default false. */
@@ -37,7 +44,10 @@ export interface CacheHandlerOptions {
 export function createCacheHandler(
   options: CacheHandlerOptions = {},
 ): CacheHandler {
-  const keyPrefix = options.keyPrefix ?? "next-cache:";
+  const basePrefix = options.keyPrefix ?? "next-cache:";
+  // Fold the release version into the namespace so different code versions
+  // never collide on the same keys during a rolling deploy.
+  const keyPrefix = options.version ? `${basePrefix}${options.version}:` : basePrefix;
   const minTtl = options.minTtlSeconds ?? 60;
   const debug = options.debug ?? false;
   const entryKey = (cacheKey: string) => `${keyPrefix}entry:${cacheKey}`;
@@ -55,6 +65,14 @@ export function createCacheHandler(
   function getClient(): Redis | null {
     if (clientUnavailable) return null;
     if (client) return client;
+    // During `next build` Next sets NEXT_PHASE. Never open a Redis connection
+    // at build time: prerendering only needs the memory fallback, and a live
+    // ioredis client's background reconnection timer would keep the build
+    // process from exiting (it hangs after prerender completes).
+    if (process.env["NEXT_PHASE"] === "phase-production-build") {
+      clientUnavailable = true;
+      return null;
+    }
     try {
       client = new Redis(options.redisUrl ?? process.env["REDIS_URL"] ?? "redis://localhost:6379", {
         // Fail commands fast instead of queueing when not connected, so build

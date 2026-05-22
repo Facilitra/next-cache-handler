@@ -58,8 +58,22 @@ That's it. `"use cache"`, `cacheLife()`, `cacheTag()` and `revalidateTag()` now 
 | `redisUrl` | `process.env.REDIS_URL` then `redis://localhost:6379` | Connection string (Valkey works with the same format) |
 | `client` | – | Pass a pre-built `ioredis` client; takes precedence over `redisUrl` |
 | `keyPrefix` | `"next-cache:"` | Namespace for all keys this app writes |
+| `version` | – | Release id (git SHA / image tag) folded into the keyspace so different code versions don't share cache during a rolling deploy. See below. |
 | `minTtlSeconds` | `60` | Floor for the Redis TTL on each entry |
 | `debug` | `false` | Log fallbacks/errors to the console |
+
+## Versioning across deploys
+
+During a rolling deploy, pods running the old and new code coexist for a while. If they share cache keys, a new pod could read an entry written by old code (or vice versa) - a shape mismatch waiting to happen. Pass a per-release `version` so each release gets its own keyspace:
+
+```js
+export default createCacheHandler({
+  keyPrefix: "myapp:",
+  version: process.env.APP_VERSION, // git SHA or image tag injected at deploy
+});
+```
+
+Now `myapp:<sha>:entry:...` keys are isolated per release. A new version starts with a cold cache (a brief miss storm that repopulates from the DB) and old entries age out via their TTL - no cross-version corruption. If `version` is omitted, all releases share one keyspace (fine if your cached shapes never change between deploys).
 
 ## How invalidation works
 

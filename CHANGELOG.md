@@ -19,11 +19,16 @@ keeps receiving compatible fixes.
   time substantially and stops nested git-installs from pulling `sharp`.
 
 ### Fixed
+- Skip opening a Redis connection during `next build` (detected via
+  `NEXT_PHASE`). A live ioredis client's background reconnection timer kept the
+  build process from exiting after prerender; build now uses the memory path
+  and exits cleanly.
 - Remove the `pnpm-workspace.yaml` that lacked a `packages:` field and broke
-  `pnpm store path` in CI. esbuild's build approval now lives in the
-  `pnpm.onlyBuiltDependencies` field of `package.json` instead.
+  `pnpm store path` in CI.
 
 ### Added
+- `version` option: a per-release id folded into the key namespace so pods of
+  different code versions don't share cache entries during a rolling deploy.
 - Vitest suite (serialize round-trip + handler behavior over a fake Redis and
   the memory-fallback path), wired into CI.
 - `.gitattributes` enforcing LF so the committed `dist/` matches CI's build.

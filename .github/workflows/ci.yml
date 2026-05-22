@@ -42,6 +42,11 @@ jobs:
         run: pnpm test
 
       - name: Smoke import (built ESM resolves and factory runs)
+        # NEXT_PHASE forces the build-time path: no Redis client is opened, so
+        # the process exits cleanly. The explicit process.exit(0) is belt-and-
+        # braces in case any handle is left open.
+        env:
+          NEXT_PHASE: phase-production-build
         run: |
           node --input-type=module -e "
             import { createCacheHandler } from './dist/index.js';
@@ -49,8 +54,9 @@ jobs:
             for (const m of ['get','set','refreshTags','getExpiration','updateTags']) {
               if (typeof h[m] !== 'function') { throw new Error('missing method: ' + m); }
             }
-            // No Redis in CI: getExpiration must fall back to memory and not throw.
+            // No Redis: getExpiration must fall back to memory and not throw.
             const ts = await h.getExpiration(['a','b']);
             if (ts !== 0) { throw new Error('expected 0 expiration, got ' + ts); }
             console.log('smoke ok');
+            process.exit(0);
           "

@@ -11,7 +11,10 @@ import { serializeEntry, deserializeEntry, } from "./serialize.js";
  * until Redis is reachable again.
  */
 export function createCacheHandler(options = {}) {
-    const keyPrefix = options.keyPrefix ?? "next-cache:";
+    const basePrefix = options.keyPrefix ?? "next-cache:";
+    // Fold the release version into the namespace so different code versions
+    // never collide on the same keys during a rolling deploy.
+    const keyPrefix = options.version ? `${basePrefix}${options.version}:` : basePrefix;
     const minTtl = options.minTtlSeconds ?? 60;
     const debug = options.debug ?? false;
     const entryKey = (cacheKey) => `${keyPrefix}entry:${cacheKey}`;
@@ -28,6 +31,14 @@ export function createCacheHandler(options = {}) {
             return null;
         if (client)
             return client;
+        // During `next build` Next sets NEXT_PHASE. Never open a Redis connection
+        // at build time: prerendering only needs the memory fallback, and a live
+        // ioredis client's background reconnection timer would keep the build
+        // process from exiting (it hangs after prerender completes).
+        if (process.env["NEXT_PHASE"] === "phase-production-build") {
+            clientUnavailable = true;
+            return null;
+        }
         try {
             client = new Redis(options.redisUrl ?? process.env["REDIS_URL"] ?? "redis://localhost:6379", {
                 // Fail commands fast instead of queueing when not connected, so build

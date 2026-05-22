@@ -11,6 +11,13 @@ export interface CacheHandlerOptions {
     client?: Redis;
     /** Namespace for every key this app writes. Set per-app so multiple apps can share one Redis. */
     keyPrefix?: string;
+    /**
+     * Release identifier (git SHA, image tag, build id). When set, it is folded
+     * into the key namespace so pods running different code versions never read
+     * each other's cache entries during a rolling deploy. A new version starts
+     * with a cold cache; old entries age out via their TTL.
+     */
+    version?: string;
     /** Floor for the Redis TTL on each entry [seconds]. Default 60. */
     minTtlSeconds?: number;
     /** Log fallbacks/errors to console. Default false. */
