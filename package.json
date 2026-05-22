@@ -1,6 +1,6 @@
 {
   "name": "@facilitra/next-cache-handler",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared Redis-backed cache handler for Next.js 16 cacheComponents (\"use cache\"). Makes the data cache and tag invalidation consistent across multiple instances/pods.",
   "type": "module",
   "license": "MIT",
@@ -19,7 +19,6 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
   },
@@ -30,9 +29,11 @@
   "devDependencies": {
     "@types/node": "^22.19.19",
     "ioredis": "^5.10.1",
-    "next": "^16.2.6",
     "typescript": "^5.7.0",
     "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   },
   "engines": {
     "node": ">=20.9.0"

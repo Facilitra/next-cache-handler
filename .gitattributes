@@ -1,0 +1,4 @@
+# Force LF for all text files so the committed dist/ matches the LF output a
+# Linux CI build produces (otherwise the dist-drift check would always fail on
+# CRLF-vs-LF), and to keep diffs clean across Windows/Linux contributors.
+* text=auto eol=lf

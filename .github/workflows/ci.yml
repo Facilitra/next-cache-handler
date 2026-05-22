@@ -30,6 +30,11 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Verify committed dist is up to date
+        run: |
+          git diff --exit-status -- dist \
+            || (echo "::error::dist/ is stale - run 'pnpm build' and commit the result" && exit 1)
+
       - name: Test
         run: pnpm test
 

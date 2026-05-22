@@ -8,6 +8,26 @@ Tags: `vX.Y.Z` are immutable releases; the `vN` tag is a moving alias that alway
 points at the latest `N.x` release, so `github:Facilitra/next-cache-handler#v1`
 keeps receiving compatible fixes.
 
+## [1.0.1] - 2026-05-22
+
+### Changed
+- Ship the prebuilt `dist/` in the repo and drop the `prepare` build script, so
+  `github:`-installed consumers need no build step, no build-script allowlist,
+  and work cleanly under Docker / `--frozen-lockfile`.
+- Remove the unused `next` devDependency (the contract types are declared
+  locally in `src/types.ts`; `next` remains a peer dependency). Cuts CI install
+  time substantially and stops nested git-installs from pulling `sharp`.
+
+### Fixed
+- Remove the `pnpm-workspace.yaml` that lacked a `packages:` field and broke
+  `pnpm store path` in CI. esbuild's build approval now lives in the
+  `pnpm.onlyBuiltDependencies` field of `package.json` instead.
+
+### Added
+- Vitest suite (serialize round-trip + handler behavior over a fake Redis and
+  the memory-fallback path), wired into CI.
+- `.gitattributes` enforcing LF so the committed `dist/` matches CI's build.
+
 ## [1.0.0] - 2026-05-22
 
 ### Added
@@ -22,4 +42,5 @@ keeps receiving compatible fixes.
   discarded; a fresh stream is rebuilt on `get`.
 - Options: `redisUrl`, `client`, `keyPrefix`, `minTtlSeconds`, `debug`.
 
+[1.0.1]: https://github.com/Facilitra/next-cache-handler/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Facilitra/next-cache-handler/releases/tag/v1.0.0
