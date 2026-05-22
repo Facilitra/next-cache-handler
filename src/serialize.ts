@@ -1,4 +1,4 @@
-import type { CacheEntry } from "./types";
+import type { CacheEntry } from "./types.js";
 
 /**
  * Wire shape we persist. The RSC payload (a ReadableStream<Uint8Array>) is

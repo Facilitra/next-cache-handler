@@ -1,12 +1,12 @@
 import Redis from "ioredis";
-import type { CacheEntry, CacheHandler, Timestamp } from "./types";
+import type { CacheEntry, CacheHandler, Timestamp } from "./types.js";
 import {
   serializeEntry,
   deserializeEntry,
   type StoredEntry,
-} from "./serialize";
+} from "./serialize.js";
 
-export type { CacheEntry, CacheHandler, Timestamp } from "./types";
+export type { CacheEntry, CacheHandler, Timestamp } from "./types.js";
 
 export interface CacheHandlerOptions {
   /**
