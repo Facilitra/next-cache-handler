@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Smoke import (built ESM resolves and factory runs)
+        run: |
+          node --input-type=module -e "
+            import { createCacheHandler } from './dist/index.js';
+            const h = createCacheHandler({ keyPrefix: 'ci:' });
+            for (const m of ['get','set','refreshTags','getExpiration','updateTags']) {
+              if (typeof h[m] !== 'function') { throw new Error('missing method: ' + m); }
+            }
+            // No Redis in CI: getExpiration must fall back to memory and not throw.
+            const ts = await h.getExpiration(['a','b']);
+            if (ts !== 0) { throw new Error('expected 0 expiration, got ' + ts); }
+            console.log('smoke ok');
+          "
