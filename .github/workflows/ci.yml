@@ -30,6 +30,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Test
+        run: pnpm test
+
       - name: Smoke import (built ESM resolves and factory runs)
         run: |
           node --input-type=module -e "

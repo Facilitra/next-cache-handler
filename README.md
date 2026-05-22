@@ -1,5 +1,7 @@
 # @facilitra/next-cache-handler
 
+[![CI](https://github.com/Facilitra/next-cache-handler/actions/workflows/ci.yml/badge.svg)](https://github.com/Facilitra/next-cache-handler/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+
 A small, dependency-light **Redis/Valkey cache handler for Next.js 16 `cacheComponents`** (the `"use cache"` directive).
 
 By default each Next.js instance keeps its `"use cache"` data in process memory, and `revalidateTag()` only clears the instance that handled the mutation. Behind more than one pod that means **stale reads and 404s after creating or updating content** until every instance happens to re-render. This handler moves the data cache *and* the tag-invalidation manifest into a shared Redis store, so one `revalidateTag()` is seen by every instance.
