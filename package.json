@@ -1,6 +1,6 @@
 {
   "name": "@facilitra/next-cache-handler",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Shared Redis-backed cache handler for Next.js 16 cacheComponents (\"use cache\"). Makes the data cache and tag invalidation consistent across multiple instances/pods.",
   "type": "module",
   "license": "MIT",

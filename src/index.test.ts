@@ -132,6 +132,36 @@ describe.each([
     expect(touched).toBeGreaterThanOrEqual(untouched);
   });
 
+  it("get returns undefined after a tag the entry carries is revalidated", async () => {
+    const h = handlerWith(makeClient());
+    // Entry written in the past so a later revalidation is unambiguously newer.
+    await h.set(
+      "flag",
+      Promise.resolve(
+        makeEntry([1], { tags: ["feature-flags"], timestamp: Date.now() - 10_000 }),
+      ),
+    );
+    expect(await h.get("flag", [])).toBeDefined();
+
+    // revalidateTag -> updateTags marks the tag stale "now".
+    await h.updateTags(["feature-flags"]);
+
+    expect(await h.get("flag", [])).toBeUndefined();
+  });
+
+  it("get still returns an entry written after the tag was revalidated", async () => {
+    const h = handlerWith(makeClient());
+    await h.updateTags(["feature-flags"]);
+    // Written after the revalidation -> fresh.
+    await h.set(
+      "fresh",
+      Promise.resolve(
+        makeEntry([2], { tags: ["feature-flags"], timestamp: Date.now() + 1000 }),
+      ),
+    );
+    expect(await h.get("fresh", [])).toBeDefined();
+  });
+
   it("does not cache a partial/errored stream", async () => {
     const h = handlerWith(makeClient());
     const errored: CacheEntry = makeEntry([1, 2], {

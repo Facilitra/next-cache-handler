@@ -8,6 +8,20 @@ Tags: `vX.Y.Z` are immutable releases; the `vN` tag is a moving alias that alway
 points at the latest `N.x` release, so `github:Facilitra/next-cache-handler#v1`
 keeps receiving compatible fixes.
 
+## [1.0.2] - 2026-05-22
+
+### Fixed
+- **`get()` now honors tag revalidation.** Previously `get()` only checked the
+  entry's own TTL and ignored the tag manifest, so `revalidateTag()` /
+  `updateTag()` were effectively no-ops: stale entries (including build-time
+  prerendered values like a disabled feature flag) were served until their
+  `cacheLife` TTL across every pod. `get()` now compares each entry's tags
+  against the shared revalidation manifest and treats the entry as a miss when
+  any tag was revalidated after the entry was written, matching Next's default
+  handler (`areTagsExpired`). This makes `revalidateTag`/purge work cluster-wide.
+
+[1.0.2]: https://github.com/Facilitra/next-cache-handler/releases/tag/v1.0.2
+
 ## [1.0.1] - 2026-05-22
 
 ### Changed

@@ -100,6 +100,36 @@ export function createCacheHandler(options = {}) {
         }
         memEntries.set(cacheKey, { stored, expiresAt: Date.now() + ttl * 1000 });
     }
+    /** Most recent revalidation timestamp across the given tags (0 if none). */
+    async function maxTagRevalidation(tags) {
+        if (tags.length === 0)
+            return 0;
+        const c = getClient();
+        if (c) {
+            try {
+                const vals = await c.hmget(tagsHashKey, ...tags);
+                let max = 0;
+                for (const v of vals) {
+                    if (v) {
+                        const n = Number(v);
+                        if (n > max)
+                            max = n;
+                    }
+                }
+                return max;
+            }
+            catch (err) {
+                log("tag lookup fallback to memory:", err);
+            }
+        }
+        let max = 0;
+        for (const tag of tags) {
+            const n = memTags.get(tag);
+            if (n && n > max)
+                max = n;
+        }
+        return max;
+    }
     return {
         async get(cacheKey) {
             // If a set for this key is in-flight, wait for it (Next contract).
@@ -113,6 +143,19 @@ export function createCacheHandler(options = {}) {
             // guard, but the memory fallback and clock skew make this worthwhile).
             if (Date.now() > stored.timestamp + ttlFor(stored) * 1000) {
                 return undefined;
+            }
+            // Honor tag revalidation. revalidateTag/updateTag writes the tag's
+            // timestamp to the shared manifest via updateTags(); if any of this
+            // entry's tags was revalidated after the entry was written, the entry is
+            // stale and must be treated as a miss. Without this check revalidateTag
+            // is a no-op for cached entries (they live until their own TTL), which
+            // serves stale data - including build-time prerendered values - across
+            // every pod. Mirrors Next's default handler (areTagsExpired).
+            if (stored.tags.length > 0) {
+                const revalidatedAt = await maxTagRevalidation(stored.tags);
+                if (revalidatedAt > stored.timestamp) {
+                    return undefined;
+                }
             }
             return deserializeEntry(stored);
         },
@@ -141,33 +184,7 @@ export function createCacheHandler(options = {}) {
             // so there is nothing to refresh. Kept as a no-op to satisfy the contract.
         },
         async getExpiration(tags) {
-            if (tags.length === 0)
-                return 0;
-            const c = getClient();
-            if (c) {
-                try {
-                    const vals = await c.hmget(tagsHashKey, ...tags);
-                    let max = 0;
-                    for (const v of vals) {
-                        if (v) {
-                            const n = Number(v);
-                            if (n > max)
-                                max = n;
-                        }
-                    }
-                    return max;
-                }
-                catch (err) {
-                    log("getExpiration fallback to memory:", err);
-                }
-            }
-            let max = 0;
-            for (const tag of tags) {
-                const n = memTags.get(tag);
-                if (n && n > max)
-                    max = n;
-            }
-            return max;
+            return maxTagRevalidation(tags);
         },
         async updateTags(tags) {
             if (tags.length === 0)
