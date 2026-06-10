@@ -77,12 +77,12 @@ describe("serialize round-trip", () => {
     });
   });
 
-  it("round-trips an empty stream", async () => {
+  it("returns null for an empty payload (never valid; would 500 on read)", async () => {
+    // A zero-byte stream deserializes to an empty stream; Next then does
+    // JSON.parse("") on read and throws. Such payloads must not be cached.
     const entry = entryWith(streamFromChunks([]));
     const stored = await serializeEntry(entry);
-    expect(stored).not.toBeNull();
-    const out = await readAll(deserializeEntry(stored!).value);
-    expect(out.length).toBe(0);
+    expect(stored).toBeNull();
   });
 
   it("returns null for an errored/aborted stream", async () => {

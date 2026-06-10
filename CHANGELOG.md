@@ -8,6 +8,21 @@ Tags: `vX.Y.Z` are immutable releases; the `vN` tag is a moving alias that alway
 points at the latest `N.x` release, so `github:Facilitra/next-cache-handler#v1`
 keeps receiving compatible fixes.
 
+## [1.0.3] - 2026-06-10
+
+### Fixed
+- **Never cache an empty payload.** `serializeEntry` previously stored a
+  zero-byte stream as a valid entry. On read it rebuilt an empty stream and
+  Next's app-page template did `JSON.parse("")`, throwing "Unexpected end of
+  JSON input" - a 500 on every hit until the entry's TTL expired. An empty
+  stream is never a valid cacheComponents payload (a real `"use cache"` render
+  always emits non-empty RSC bytes), so it is now discarded like an errored
+  stream and recomputes on the next request. Observed in production on
+  2026-06-10 after empty entries were written during a DB-saturation incident
+  and poisoned pages for hours.
+
+[1.0.3]: https://github.com/Facilitra/next-cache-handler/releases/tag/v1.0.3
+
 ## [1.0.2] - 2026-05-22
 
 ### Fixed

@@ -40,14 +40,23 @@ async function drainStream(
 }
 
 /**
- * Serialize a resolved CacheEntry to the wire shape. Returns null if the value
- * stream errored mid-flight (do not cache partial data).
+ * Serialize a resolved CacheEntry to the wire shape. Returns null when the
+ * payload must not be cached: either the value stream errored mid-flight, or it
+ * produced zero bytes.
+ *
+ * An empty (zero-byte) payload is never a valid cacheComponents entry - a real
+ * "use cache" render always emits a non-empty RSC stream. If one is stored, the
+ * reader rebuilds an empty stream and Next's app-page template does
+ * `JSON.parse("")`, throwing "Unexpected end of JSON input" -> a 500 on every
+ * hit until the entry's TTL expires (observed 2026-06-10: empty entries written
+ * during a DB-saturation incident poisoned pages for hours). Treat empty like
+ * errored and skip caching so the value recomputes on the next request.
  */
 export async function serializeEntry(
   entry: CacheEntry,
 ): Promise<StoredEntry | null> {
   const buf = await drainStream(entry.value);
-  if (buf === null) return null;
+  if (buf === null || buf.length === 0) return null;
   return {
     value: buf.toString("base64"),
     tags: entry.tags,
