@@ -198,3 +198,59 @@ describe.each([
     expect(await readAll(got!.value)).toEqual(bytes);
   });
 });
+
+/**
+ * Rolling-deploy semantics. Two releases share one Redis, as they do while a
+ * RollingUpdate drains the old ReplicaSet: entries must stay isolated per
+ * release (their shape is version-specific), but tag invalidation must cross
+ * releases, or a pod on the new release cannot invalidate one still serving
+ * the old.
+ */
+describe("createCacheHandler - versioned releases sharing one Redis", () => {
+  function releasePair() {
+    const shared = new FakeRedis() as unknown as Redis;
+    return {
+      shared,
+      a: createCacheHandler({ client: shared, keyPrefix: "test:", version: "relA" }),
+      b: createCacheHandler({ client: shared, keyPrefix: "test:", version: "relB" }),
+    };
+  }
+
+  it("keeps entries isolated per release", async () => {
+    const { a, b } = releasePair();
+    await a.set("k", Promise.resolve(makeEntry([1, 2, 3])));
+
+    expect(await a.get("k", [])).toBeDefined();
+    // B must not read an entry written by A: its shape belongs to that release.
+    expect(await b.get("k", [])).toBeUndefined();
+  });
+
+  it("propagates tag invalidation across releases", async () => {
+    const { a, b } = releasePair();
+    // Backdated: the entry was cached before the invalidation, as in a real
+    // rollout. The staleness check is a strict >, so an entry written in the
+    // same millisecond as the updateTags call would survive it.
+    await a.set(
+      "k",
+      Promise.resolve(makeEntry([1, 2, 3], { tags: ["game:x"], timestamp: Date.now() - 50 })),
+    );
+    expect(await a.get("k", [])).toBeDefined();
+
+    // A pod on the new release invalidates while old pods are still serving.
+    await b.updateTags(["game:x"]);
+
+    expect(await a.get("k", [])).toBeUndefined();
+    expect(await a.getExpiration(["game:x"])).toBeGreaterThan(0);
+  });
+
+  it("writes exactly one tag manifest for all releases", async () => {
+    const { shared, a, b } = releasePair();
+    await a.updateTags(["t1"]);
+    await b.updateTags(["t2"]);
+
+    // One hash, not one per release: a versioned manifest is never given a TTL,
+    // so it would leak a key on every deploy.
+    const hashes = [...(shared as unknown as FakeRedis).hashes.keys()];
+    expect(hashes).toEqual(["test:tags"]);
+  });
+});

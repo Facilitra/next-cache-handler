@@ -13,9 +13,11 @@ export interface CacheHandlerOptions {
     keyPrefix?: string;
     /**
      * Release identifier (git SHA, image tag, build id). When set, it is folded
-     * into the key namespace so pods running different code versions never read
-     * each other's cache entries during a rolling deploy. A new version starts
-     * with a cold cache; old entries age out via their TTL.
+     * into the ENTRY key namespace so pods running different code versions never
+     * read each other's cache entries during a rolling deploy. A new version
+     * starts with a cold cache; old entries age out via their TTL.
+     *
+     * The tag manifest is deliberately NOT versioned - see tagsHashKey below.
      */
     version?: string;
     /** Floor for the Redis TTL on each entry [seconds]. Default 60. */
