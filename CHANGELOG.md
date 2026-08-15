@@ -8,6 +8,28 @@ Tags: `vX.Y.Z` are immutable releases; the `vN` tag is a moving alias that alway
 points at the latest `N.x` release, so `github:Facilitra/next-cache-handler#v1`
 keeps receiving compatible fixes.
 
+## [1.0.4] - 2026-08-15
+
+### Fixed
+- **Tag invalidation now crosses releases.** The tag manifest was namespaced by
+  `version` alongside the entries, so during a rolling deploy a pod on the new
+  release wrote `<prefix><newSha>:tags` while pods still serving the old release
+  read `<prefix><oldSha>:tags`. An invalidation issued mid-rollout never reached
+  the draining pods, which kept serving stale content until they terminated, and
+  a post-deploy `revalidateTag("all")` purge could not reach them either.
+  Transient and self-healing, so easy to never notice.
+
+  The manifest now hangs off the unversioned `keyPrefix`. Entries stay versioned:
+  their *shape* is release-specific, whereas tag timestamps are absolute epoch
+  millis that mean the same thing to every release. Consumers that do not set
+  `version` are unaffected - their keys are unchanged.
+
+  This also stops a small leak: entries expire via their TTL, but the tag hash is
+  never given one, so a versioned manifest orphaned one Redis key per deploy.
+
+  Consumers pick this up on their next `pnpm install`. The first read after
+  upgrading sees an empty manifest and recomputes; there is no migration.
+
 ## [1.0.3] - 2026-06-10
 
 ### Fixed

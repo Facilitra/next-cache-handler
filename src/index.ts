@@ -20,9 +20,11 @@ export interface CacheHandlerOptions {
   keyPrefix?: string;
   /**
    * Release identifier (git SHA, image tag, build id). When set, it is folded
-   * into the key namespace so pods running different code versions never read
-   * each other's cache entries during a rolling deploy. A new version starts
-   * with a cold cache; old entries age out via their TTL.
+   * into the ENTRY key namespace so pods running different code versions never
+   * read each other's cache entries during a rolling deploy. A new version
+   * starts with a cold cache; old entries age out via their TTL.
+   *
+   * The tag manifest is deliberately NOT versioned - see tagsHashKey below.
    */
   version?: string;
   /** Floor for the Redis TTL on each entry [seconds]. Default 60. */
@@ -51,7 +53,15 @@ export function createCacheHandler(
   const minTtl = options.minTtlSeconds ?? 60;
   const debug = options.debug ?? false;
   const entryKey = (cacheKey: string) => `${keyPrefix}entry:${cacheKey}`;
-  const tagsHashKey = `${keyPrefix}tags`;
+  // Shared across releases (basePrefix, not keyPrefix). Entries are versioned
+  // because their SHAPE is version-specific; tag timestamps are just absolute
+  // epoch millis and mean the same thing to every release. Versioning them too
+  // meant an invalidation issued by a pod on release B could not reach pods
+  // still serving release A during a rolling deploy, so those pods served
+  // stale content until they terminated - and the post-deploy purge could not
+  // reach them either. It also orphaned one `<prefix><sha>:tags` hash per
+  // deploy: entries expire via their TTL, but this hash is never given one.
+  const tagsHashKey = `${basePrefix}tags`;
 
   // ── Per-process fallbacks (used only when Redis is unreachable) ──
   const memEntries = new Map<string, { stored: StoredEntry; expiresAt: number }>();
