@@ -12,14 +12,15 @@ By default each Next.js instance keeps its `"use cache"` data in process memory,
 - Buffers the RSC stream on `set`, discards partial/errored payloads, rebuilds a fresh stream on `get`
 - ~1 file of logic, no transitive runtime deps beyond your existing `ioredis`
 
-Requires Next.js 16+ with `cacheComponents: true` and `ioredis` (peer deps).
+Requires Next.js 16+ with `cacheComponents: true` and `ioredis` 6 (peer deps).
+Still on ioredis 5? Stay on `#v1`.
 
 ## Install
 
 ```bash
-pnpm add github:Facilitra/next-cache-handler#v1
+pnpm add github:Facilitra/next-cache-handler#v2
 # ioredis is a peer dep - most apps already have it
-pnpm add ioredis
+pnpm add ioredis@^6
 ```
 
 (The repo is public, so the git install needs no token.)

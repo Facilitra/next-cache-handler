@@ -8,6 +8,19 @@ Tags: `vX.Y.Z` are immutable releases; the `vN` tag is a moving alias that alway
 points at the latest `N.x` release, so `github:Facilitra/next-cache-handler#v1`
 keeps receiving compatible fixes.
 
+## [2.0.0] - 2026-09-25
+
+### Changed
+- **BREAKING: peer dependency is now `ioredis@^6`.** ioredis 6 speaks RESP3 by
+  default. The handler only uses `GET`, `SET … EX`, `HMGET` and `HSET`, whose
+  replies are unchanged under RESP3, so no code changed. Apps still on ioredis 5
+  should stay on `#v1`, which keeps pointing at 1.0.4.
+- Dev tooling: vitest 5, @types/node 26. CI runs on Node 24 (vitest 5 needs
+  Node >= 22); `engines` stays at Next's floor of `>=20.9.0`.
+- `next` and `vite` are now explicit dev dependencies instead of auto-installed
+  peers, which had drifted to vulnerable versions (next 16.2.6, vite 7.3.3).
+  Dev-only; consumers bring their own `next`.
+
 ## [1.0.4] - 2026-08-15
 
 ### Fixed
